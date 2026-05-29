@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!-- Background squircle in brand orange -->
+  <rect x="192" y="192" width="640" height="640" rx="160" ry="160" fill="#FF6B4A"/>
+
+  <!-- White checkmark, generously sized -->
+  <path d="M 360 520 L 480 640 L 680 400"
+        stroke="#FFFFFF" stroke-width="64" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+
+  <!-- Subtle accent dot above the check -->
+  <circle cx="720" cy="320" r="28" fill="#FFFFFF" opacity="0.85"/>
+</svg>
