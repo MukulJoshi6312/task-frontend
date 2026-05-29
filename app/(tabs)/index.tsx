@@ -283,7 +283,7 @@ const makeStyles = (t: Theme) =>
     fab: {
       position: "absolute", right: 22, bottom: 16, width: 62, height: 62,
       borderRadius: 22, alignItems: "center", justifyContent: "center",
-      shadowOpacity: 0.55, shadowRadius: 14, shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: 0.55, shadowRadius: 4, shadowOffset: { width: 0, height: 2 },
       elevation: 10,
     },
   });

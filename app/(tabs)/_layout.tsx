@@ -14,10 +14,16 @@ export default function TabsLayout() {
         tabBarLabelStyle: { fontFamily: FONTS.sansSemi, fontSize: 11 },
         tabBarStyle: {
           backgroundColor: theme.surface,
-          borderTopColor: theme.line,
-          borderTopWidth: 1,
-          borderTopRightRadius:20,
-          borderTopLeftRadius:20
+          paddingTop:8,
+          borderTopWidth: 0,            // remove the hairline border
+          borderTopRightRadius: 20,
+          borderTopLeftRadius: 20,
+          // soft shadow above the bar
+          shadowColor: "#000",
+          shadowOpacity: 0.12,
+          shadowRadius: 12,
+          shadowOffset: { width: 0, height: -4 },
+          elevation: 16,
         },
       }}
     >
