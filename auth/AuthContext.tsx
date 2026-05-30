@@ -14,6 +14,7 @@ import {
   uploadAvatar as apiUploadAvatar,
   removeAvatar as apiRemoveAvatar,
 } from "../api/auth";
+import { mockUpgrade as apiMockUpgrade, mockDowngrade as apiMockDowngrade } from "../api/billing";
 import type { User } from "../types";
 
 type AuthContextValue = {
@@ -30,6 +31,9 @@ type AuthContextValue = {
   updateProfile: (name: string) => Promise<void>;
   uploadAvatar: (file: { uri: string; name: string; type: string }) => Promise<void>;
   removeAvatar: () => Promise<void>;
+  isPremium: boolean;
+  mockUpgrade: () => Promise<void>;
+  mockDowngrade: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -117,6 +121,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(updated);
   }, []);
 
+  const mockUpgrade = useCallback(async () => {
+    const updated = await apiMockUpgrade();
+    setUser(updated);
+  }, []);
+
+  const mockDowngrade = useCallback(async () => {
+    const updated = await apiMockDowngrade();
+    setUser(updated);
+  }, []);
+
+  const isPremium = user?.plan === "premium";
+
   return (
     <AuthContext.Provider
       value={{
@@ -125,6 +141,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         verifyEmail, resendVerification,
         forgotPassword, resetPassword, changePassword,
         updateProfile, uploadAvatar, removeAvatar,
+        isPremium, mockUpgrade, mockDowngrade,
       }}
     >
       {children}

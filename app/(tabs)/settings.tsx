@@ -3,6 +3,7 @@ import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet, Animated,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import Constants from "expo-constants";
 import { useTheme } from "../../theme/ThemeContext";
@@ -25,7 +26,8 @@ const formatLogin = (iso?: string | null) => {
 export default function SettingsScreen() {
   const { theme } = useTheme();
   const s = makeStyles(theme);
-  const { user } = useAuth();
+  const router = useRouter();
+  const { user, isPremium, mockDowngrade } = useAuth();
   const currentDevice = describeDevice();
   const appVersion = Constants.expoConfig?.version ?? "1.0.0";
 
@@ -34,9 +36,49 @@ export default function SettingsScreen() {
       <ScrollView contentContainerStyle={{ padding: 24, paddingBottom: 100 }}>
         <Text style={s.title}>Settings</Text>
 
+        {/* Subscription */}
+        <Section label="Subscription" theme={theme}>
+          <View style={s.planRow}>
+            <View style={[s.planBadge, { backgroundColor: isPremium ? theme.accentSoft : theme.surfaceAlt }]}>
+              <Ionicons
+                name={isPremium ? "star" : "star-outline"}
+                size={18}
+                color={isPremium ? theme.accent : theme.inkSoft}
+              />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={s.planLabel}>Current plan</Text>
+              <Text style={s.planValue}>{isPremium ? "Premium" : "Free"}</Text>
+            </View>
+            {isPremium ? (
+              <TouchableOpacity onPress={() => void mockDowngrade()} style={s.manageBtn}>
+                <Text style={{ color: theme.inkSoft, fontFamily: FONTS.sansSemi, fontSize: 13 }}>Cancel</Text>
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity onPress={() => router.push("/paywall")} style={s.upgradeBtn}>
+                <Text style={{ color: theme.accentInk, fontFamily: FONTS.sansBold, fontSize: 13 }}>Upgrade</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </Section>
+
         {/* Appearance */}
         <Section label="Appearance" theme={theme}>
           <ThemeCard />
+        </Section>
+
+        {/* Personalize */}
+        <Section label="Personalize" theme={theme}>
+          <TouchableOpacity onPress={() => router.push("/categories")} activeOpacity={0.7} style={s.navRow}>
+            <View style={s.navIcon}>
+              <Ionicons name="pricetags-outline" size={18} color={theme.inkSoft} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={s.navLabel}>Categories</Text>
+              <Text style={s.navValue}>Add, edit, or remove task categories</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={theme.inkFaint} />
+          </TouchableOpacity>
         </Section>
 
         {/* Account */}
@@ -261,4 +303,32 @@ const makeStyles = (t: Theme) =>
       fontSize: 30, fontFamily: FONTS.serifSemi, color: t.ink,
       letterSpacing: -0.5, marginTop: 4, marginBottom: 22,
     },
+    planRow: {
+      flexDirection: "row", alignItems: "center", gap: 12,
+      paddingHorizontal: 16, paddingVertical: 14,
+    },
+    planBadge: {
+      width: 36, height: 36, borderRadius: 11,
+      alignItems: "center", justifyContent: "center",
+    },
+    planLabel: { color: t.inkSoft, fontSize: 12, fontFamily: FONTS.sansSemi, letterSpacing: 0.2 },
+    planValue: { color: t.ink, fontSize: 14.5, fontFamily: FONTS.sansSemi, marginTop: 2 },
+    upgradeBtn: {
+      paddingHorizontal: 16, paddingVertical: 9, borderRadius: 999,
+      backgroundColor: t.accent,
+    },
+    manageBtn: {
+      paddingHorizontal: 16, paddingVertical: 9, borderRadius: 999,
+      borderWidth: 1, borderColor: t.line, backgroundColor: t.surfaceAlt,
+    },
+    navRow: {
+      flexDirection: "row", alignItems: "center", gap: 12,
+      paddingHorizontal: 16, paddingVertical: 14,
+    },
+    navIcon: {
+      width: 36, height: 36, borderRadius: 11, backgroundColor: t.surfaceAlt,
+      alignItems: "center", justifyContent: "center",
+    },
+    navLabel: { color: t.ink, fontSize: 14.5, fontFamily: FONTS.sansSemi },
+    navValue: { color: t.inkSoft, fontSize: 12, fontFamily: FONTS.sansMedium, marginTop: 2 },
   });

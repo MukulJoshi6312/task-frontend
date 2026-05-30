@@ -6,9 +6,10 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import DateTimePicker, { DateTimePickerEvent } from "@react-native-community/datetimepicker";
 import { useTheme } from "../theme/ThemeContext";
-import { TAGS, TAG_COLORS, PRIORITIES } from "../theme/theme";
+import { PRIORITIES } from "../theme/theme";
 import { FONTS } from "../theme/fonts";
 import { formatDue } from "../lib/dates";
+import { useCategories } from "../categories/CategoriesContext";
 import type { Task, Priority, Subtask } from "../types";
 
 type Props = {
@@ -29,10 +30,11 @@ type Props = {
 export default function TaskSheet({ visible, title, initial, onClose, onSubmit }: Props) {
   const { theme, mode } = useTheme();
   const s = makeStyles(theme);
+  const { categories } = useCategories();
 
   const [name, setName] = useState(initial?.title ?? "");
   const [note, setNote] = useState(initial?.note ?? "");
-  const [tag, setTag] = useState(initial?.tag ?? "Work");
+  const [tag, setTag] = useState(initial?.tag ?? categories[0]?.name ?? "Work");
   const [priority, setPriority] = useState<Priority>(initial?.priority ?? "med");
   const [due, setDue] = useState<Date | null>(initial?.due ? new Date(initial.due) : null);
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -43,7 +45,7 @@ export default function TaskSheet({ visible, title, initial, onClose, onSubmit }
   const reset = () => {
     setName(initial?.title ?? "");
     setNote(initial?.note ?? "");
-    setTag(initial?.tag ?? "Work");
+    setTag(initial?.tag ?? categories[0]?.name ?? "Work");
     setPriority(initial?.priority ?? "med");
     setDue(initial?.due ? new Date(initial.due) : null);
     setSubtasks(initial?.subtasks ?? []);
@@ -144,28 +146,24 @@ export default function TaskSheet({ visible, title, initial, onClose, onSubmit }
             </Field>
 
             <Field label="Category" theme={theme}>
-              <View style={s.row}>
-                {TAGS.map((tg) => {
-                  const on = tag === tg;
+              <View style={s.catWrap}>
+                {categories.map((c) => {
+                  const on = tag === c.name;
                   return (
                     <TouchableOpacity
-                      key={tg}
-                      onPress={() => setTag(tg)}
+                      key={c._id}
+                      onPress={() => setTag(c.name)}
                       style={[
-                        s.optionBtn,
+                        s.catChip,
                         {
-                          borderColor: on ? TAG_COLORS[tg] : theme.line,
-                          backgroundColor: on ? TAG_COLORS[tg] + "1A" : "transparent",
+                          borderColor: on ? c.color : theme.line,
+                          backgroundColor: on ? c.color + "1A" : "transparent",
                         },
                       ]}
                     >
-                      <Text
-                        style={[
-                          s.optionText,
-                          { color: on ? TAG_COLORS[tg] : theme.inkSoft, fontFamily: FONTS.sansSemi },
-                        ]}
-                      >
-                        {tg}
+                      <View style={[s.catDot, { backgroundColor: c.color }]} />
+                      <Text style={{ color: on ? c.color : theme.inkSoft, fontFamily: FONTS.sansSemi, fontSize: 13.5 }}>
+                        {c.name}
                       </Text>
                     </TouchableOpacity>
                   );
@@ -375,6 +373,12 @@ const makeStyles = (t: ReturnType<typeof useTheme>["theme"]) =>
       alignItems: "center", justifyContent: "center",
     },
     optionText: { fontSize: 13.5 },
+    catWrap: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+    catChip: {
+      flexDirection: "row", alignItems: "center", gap: 7,
+      paddingHorizontal: 14, paddingVertical: 10, borderRadius: 13, borderWidth: 1.5,
+    },
+    catDot: { width: 10, height: 10, borderRadius: 5 },
     dueChip: {
       flex: 1, flexDirection: "row", alignItems: "center", gap: 8,
       paddingHorizontal: 14, paddingVertical: 12,

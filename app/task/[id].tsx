@@ -8,7 +8,8 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../../theme/ThemeContext";
-import { TAG_COLORS, PRIORITIES } from "../../theme/theme";
+import { PRIORITIES } from "../../theme/theme";
+import { useCategories } from "../../categories/CategoriesContext";
 import { FONTS } from "../../theme/fonts";
 import { fetchTask, updateTask, deleteTask } from "../../api/tasks";
 import { formatDue } from "../../lib/dates";
@@ -21,6 +22,7 @@ export default function TaskDetailScreen() {
   const { theme } = useTheme();
   const s = makeStyles(theme);
   const router = useRouter();
+  const { colorFor } = useCategories();
   // useLocalSearchParams reads the dynamic [id] segment.
   // It returns string | string[] | undefined, so we narrow:
   const params = useLocalSearchParams<{ id: string }>();
@@ -45,7 +47,7 @@ export default function TaskDetailScreen() {
   }
 
   const p = PRIORITIES[task.priority];
-  const tagColor = TAG_COLORS[task.tag] || theme.inkSoft;
+  const tagColor = colorFor(task.tag);
   const doneCount = task.subtasks.filter((x) => x.d).length;
   const pct = task.subtasks.length
     ? Math.round((doneCount / task.subtasks.length) * 100)

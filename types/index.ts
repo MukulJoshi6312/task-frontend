@@ -1,9 +1,18 @@
+export type Category = {
+  _id: string;
+  name: string;
+  color: string;
+};
+
+export type Plan = "free" | "premium";
+
 export type User = {
   _id: string;
   email: string;
   name: string;
   emailVerified?: boolean;
   avatarUrl?: string;
+  plan?: Plan;
   lastLoginAt?: string | null;     // ISO date string from the server
   lastLoginDevice?: string;
 };

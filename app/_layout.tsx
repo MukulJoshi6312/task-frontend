@@ -23,6 +23,7 @@ import {
 } from "@expo-google-fonts/plus-jakarta-sans";
 import { ThemeProvider, useTheme } from "../theme/ThemeContext";
 import { AuthProvider, useAuth } from "../auth/AuthContext";
+import { CategoriesProvider } from "../categories/CategoriesContext";
 import BrandedLoading from "../components/BrandedLoading";
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -58,7 +59,9 @@ export default function RootLayout() {
       <SafeAreaProvider>
         <ThemeProvider>
           <AuthProvider>
-            <RootStack />
+            <CategoriesProvider>
+              <RootStack />
+            </CategoriesProvider>
           </AuthProvider>
         </ThemeProvider>
       </SafeAreaProvider>
@@ -107,6 +110,8 @@ function RootStack() {
         <Stack.Screen name="verify" />
         <Stack.Screen name="forgot" />
         <Stack.Screen name="task/[id]" />
+        <Stack.Screen name="categories" />
+        <Stack.Screen name="paywall" options={{ presentation: "modal" }} />
       </Stack>
     </NavThemeProvider>
   );

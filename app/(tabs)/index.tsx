@@ -1,16 +1,18 @@
 import { useCallback, useMemo, useState } from "react";
 import {
-  View, Text, FlatList, TouchableOpacity, StyleSheet,
+  View, Text, TextInput, FlatList, TouchableOpacity, StyleSheet,
   ActivityIndicator, RefreshControl, Alert,
 } from "react-native";
+import ReanimatedSwipeable from "react-native-gesture-handler/ReanimatedSwipeable";
 import { useFocusEffect } from "@react-navigation/native";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../../theme/ThemeContext";
-import { TAG_COLORS, PRIORITIES } from "../../theme/theme";
+import { PRIORITIES } from "../../theme/theme";
 import { FONTS } from "../../theme/fonts";
-import { fetchTasks, createTask, updateTask } from "../../api/tasks";
+import { useCategories } from "../../categories/CategoriesContext";
+import { fetchTasks, createTask, updateTask, deleteTask } from "../../api/tasks";
 import TaskSheet from "../../components/TaskSheet";
 import Avatar from "../../components/Avatar";
 import {
@@ -56,6 +58,7 @@ export default function HomeScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [filter, setFilter] = useState<Filter>("All");
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [query, setQuery] = useState("");
 
   const greetingName = user?.name?.trim() || user?.email?.split("@")[0] || "there";
 
@@ -80,13 +83,20 @@ export default function HomeScreen() {
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
   const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
     return tasks.filter((x) => {
-      if (filter === "Done") return x.completed;
-      if (filter === "Today") return dueToday(x.due) && !x.completed;
-      if (filter === "Upcoming") return dueUpcoming(x.due) && !x.completed;
-      return true;
+      // 1) chip filter
+      const passesChip =
+        filter === "Done" ? x.completed :
+        filter === "Today" ? dueToday(x.due) && !x.completed :
+        filter === "Upcoming" ? dueUpcoming(x.due) && !x.completed :
+        true;
+      if (!passesChip) return false;
+      // 2) text search (title + note)
+      if (!q) return true;
+      return x.title.toLowerCase().includes(q) || (x.note ?? "").toLowerCase().includes(q);
     });
-  }, [tasks, filter]);
+  }, [tasks, filter, query]);
 
   const remaining = tasks.filter((x) => !x.completed).length;
 
@@ -101,6 +111,17 @@ export default function HomeScreen() {
     }
   };
 
+  const handleDelete = async (task: Task) => {
+    // Optimistic: remove immediately, restore if the request fails.
+    setTasks((prev) => prev.filter((t) => t._id !== task._id));
+    try {
+      await deleteTask(task._id);
+    } catch {
+      setTasks((prev) => [task, ...prev]);
+      Alert.alert("Error", "Could not delete task.");
+    }
+  };
+
   const handleCreate = async (data: {
     title: string; note: string; tag: string; priority: Task["priority"]; due: string | null; subtasks: Subtask[];
   }) => {
@@ -109,6 +130,12 @@ export default function HomeScreen() {
       const created = await createTask(data);
       setTasks((prev) => [created, ...prev]);
     } catch (e) {
+      const err = e as { response?: { status?: number; data?: { code?: string } } };
+      // Free-plan task limit hit → send them to the paywall instead of a generic error.
+      if (err?.response?.status === 402 && err?.response?.data?.code === "TASK_LIMIT_REACHED") {
+        router.push("/paywall");
+        return;
+      }
       console.error("[Home] createTask failed:", e);
       Alert.alert("Error", "Could not create task.");
     }
@@ -126,6 +153,25 @@ export default function HomeScreen() {
       <Text style={s.sub}>
         You have <Text style={{ color: theme.accent, fontFamily: FONTS.sansBold }}>{remaining} tasks</Text> left for today.
       </Text>
+
+      <View style={s.searchRow}>
+        <Ionicons name="search" size={18} color={theme.inkFaint} />
+        <TextInput
+          value={query}
+          onChangeText={setQuery}
+          placeholder="Search tasks"
+          placeholderTextColor={theme.inkFaint}
+          autoCapitalize="none"
+          autoCorrect={false}
+          returnKeyType="search"
+          style={s.searchInput}
+        />
+        {query.length > 0 && (
+          <TouchableOpacity onPress={() => setQuery("")} hitSlop={8}>
+            <Ionicons name="close-circle" size={18} color={theme.inkFaint} />
+          </TouchableOpacity>
+        )}
+      </View>
 
       <View style={s.filtersRow}>
         {FILTERS.map((f) => {
@@ -179,12 +225,27 @@ export default function HomeScreen() {
             </View>
           }
           renderItem={({ item }) => (
-            <TaskCard
-              task={item}
-              theme={theme}
-              onToggle={() => toggleDone(item)}
-              onOpen={() => router.push({ pathname: "/task/[id]", params: { id: item._id } })}
-            />
+            <ReanimatedSwipeable
+              friction={2}
+              rightThreshold={40}
+              renderRightActions={() => (
+                <TouchableOpacity
+                  onPress={() => handleDelete(item)}
+                  activeOpacity={0.85}
+                  style={s.deleteAction}
+                >
+                  <Ionicons name="trash-outline" size={22} color="#fff" />
+                  <Text style={s.deleteActionText}>Delete</Text>
+                </TouchableOpacity>
+              )}
+            >
+              <TaskCard
+                task={item}
+                theme={theme}
+                onToggle={() => toggleDone(item)}
+                onOpen={() => router.push({ pathname: "/task/[id]", params: { id: item._id } })}
+              />
+            </ReanimatedSwipeable>
           )}
         />
       )}
@@ -213,8 +274,9 @@ function TaskCard({
   task: Task; theme: Theme; onToggle: () => void; onOpen: () => void;
 }) {
   const s = makeStyles(theme);
+  const { colorFor } = useCategories();
   const p = PRIORITIES[task.priority];
-  const tagColor = TAG_COLORS[task.tag] || theme.inkSoft;
+  const tagColor = colorFor(task.tag);
   return (
     <TouchableOpacity onPress={onOpen} activeOpacity={0.85} style={[s.card, task.completed && { opacity: 0.62 }]}>
       <TouchableOpacity
@@ -261,6 +323,17 @@ const makeStyles = (t: Theme) =>
     dateLine: { fontSize: 13, color: t.inkSoft, fontFamily: FONTS.sansMedium, letterSpacing: 0.2 },
     greeting: { fontSize: 34, fontFamily: FONTS.serifSemi, color: t.ink, marginTop: 6, letterSpacing: -0.5, lineHeight: 40 },
     sub: { paddingHorizontal: 24, marginTop: 14, fontSize: 14, color: t.inkSoft, fontFamily: FONTS.sansMedium },
+    searchRow: {
+      flexDirection: "row", alignItems: "center", gap: 8,
+      marginHorizontal: 24, marginTop: 14,
+      paddingHorizontal: 14, paddingVertical: 10,
+      borderRadius: 14, borderWidth: 1, borderColor: t.line,
+      backgroundColor: t.surface,
+    },
+    searchInput: {
+      flex: 1, color: t.ink, fontSize: 14.5, fontFamily: FONTS.sansMedium,
+      padding: 0,
+    },
     filtersRow: {
       flexDirection: "row",
       paddingHorizontal: 24, paddingTop: 14, paddingBottom: 6,
@@ -278,6 +351,13 @@ const makeStyles = (t: Theme) =>
       alignItems: "center", justifyContent: "center", marginTop: 1,
     },
     cardTitle: { fontSize: 15.5, fontFamily: FONTS.sansSemi, lineHeight: 20 },
+    deleteAction: {
+      // matches the card's marginBottom + radius so it lines up as the card slides
+      width: 88, marginBottom: 10, borderRadius: 22,
+      backgroundColor: t.danger,
+      alignItems: "center", justifyContent: "center", gap: 4,
+    },
+    deleteActionText: { color: "#fff", fontFamily: FONTS.sansBold, fontSize: 12 },
     metaRow: { flexDirection: "row", alignItems: "center", gap: 10, marginTop: 8, flexWrap: "wrap" },
     pri: { paddingHorizontal: 9, paddingVertical: 5, borderRadius: 8 },
     fab: {
