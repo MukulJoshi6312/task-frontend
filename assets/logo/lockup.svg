@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 320" width="1200" height="320">
+  <!--
+    Taskly horizontal lockup — for navigation headers, marketing pages,
+    email signatures, App Store listings, etc.
+    Composition: 256px icon on the left, vertically centered wordmark on the right.
+  -->
+  <style>
+    .wordmark {
+      font-family: "Fraunces", "Times New Roman", serif;
+      font-weight: 600;
+      font-size: 196px;
+      letter-spacing: -4px;
+    }
+    .tagline {
+      font-family: "Plus Jakarta Sans", "Segoe UI", sans-serif;
+      font-weight: 500;
+      font-size: 32px;
+      letter-spacing: 0.5px;
+    }
+  </style>
+
+  <!-- ── ICON GROUP ── -->
+  <g transform="translate(40, 32)">
+    <!-- Squircle background -->
+    <rect x="0" y="0" width="256" height="256" rx="57" ry="57" fill="#FF6B4A"/>
+    <!-- Checkmark -->
+    <path d="M 76 138 L 115 177 L 182 90"
+          fill="none" stroke="#FFFFFF" stroke-width="23"
+          stroke-linecap="round" stroke-linejoin="round"/>
+    <!-- Accent dot -->
+    <circle cx="190" cy="78" r="9" fill="#FFFFFF" opacity="0.85"/>
+  </g>
+
+  <!-- ── WORDMARK GROUP ── -->
+  <g>
+    <text x="336" y="200" class="wordmark" fill="#1C1A17">Taskly</text>
+    <!-- Optional tagline below the wordmark (delete if you don't want it) -->
+    <text x="338" y="252" class="tagline" fill="#6B6359">A calmer way to get things done.</text>
+  </g>
+</svg>

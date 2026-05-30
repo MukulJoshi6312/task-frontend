@@ -4,20 +4,30 @@ import { tokenStorage } from "../lib/tokenStorage";
 
 const SERVER_PORT = 4000;
 
-// On a real device, `localhost` means the phone itself. We derive the dev
-// machine's LAN IP from the same hostUri Metro uses, so the device can reach
-// the API at http://<your-mac-ip>:4000/api automatically.
+// The deployed backend on Render. Used by default so installed builds and any
+// device (not just one on the dev LAN) can reach the API.
+const DEPLOYED_URL = "https://taskly-backend-mn0y.onrender.com/api";
+
+// On a real device in dev, `localhost` means the phone itself. We derive the
+// dev machine's LAN IP from the same hostUri Metro uses, so the device can
+// reach a locally-running API at http://<your-mac-ip>:4000/api.
 const debuggerHost =
   Constants.expoConfig?.hostUri ??
   (Constants as { expoGoConfig?: { hostUri?: string } }).expoGoConfig?.hostUri;
 
 const devHost = debuggerHost?.split(":")[0] ?? "localhost";
+const LOCAL_URL = `http://${devHost}:${SERVER_PORT}/api`;
 
-export const BASE_URL = `http://${devHost}:${SERVER_PORT}/api`;
+// Precedence: explicit env override → deployed Render URL → local dev server.
+// Set EXPO_PUBLIC_API_URL=http://<mac-ip>:4000/api to test against a local server.
+export const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? DEPLOYED_URL ?? LOCAL_URL;
+// export const BASE_URL = LOCAL_URL;
 
 const client = axios.create({
   baseURL: BASE_URL,
-  timeout: 10000,
+  // Render's free tier cold-starts (~30-60s) after idling, so the first
+  // request can be slow. A generous timeout avoids spurious failures.
+  timeout: 60000,
   headers: { "Content-Type": "application/json" },
 });
 

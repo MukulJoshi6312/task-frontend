@@ -32,7 +32,7 @@ export default function SettingsScreen() {
   const router = useRouter();
   const { user, isPremium, mockDowngrade } = useAuth();
   const currentDevice = describeDevice();
-  const appVersion = Constants.expoConfig?.version ?? "1.0.0";
+  const appVersion = Constants.expoConfig?.version ?? "1.1.0";
 
   const [remindersOn, setRemindersOn] = useState(true);
   useEffect(() => { getRemindersEnabled().then(setRemindersOn); }, []);

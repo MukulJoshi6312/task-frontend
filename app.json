@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "app",
+    "name": "Taskly",
     "slug": "app",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -9,9 +9,14 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "bundleIdentifier": "com.mukuljoshi.taskly",
+      "supportsTablet": true,
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
+      "package": "com.mukuljoshi.taskly",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -30,7 +35,7 @@
         "expo-splash-screen",
         {
           "image": "./assets/images/splash-icon.png",
-          "imageWidth": 160,
+          "imageWidth": 280,
           "resizeMode": "contain",
           "backgroundColor": "#F4F1EA",
           "dark": {
@@ -44,6 +49,12 @@
     ],
     "experiments": {
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "0e7a9235-cbd3-4261-b65a-e2f335ddf5be"
+      }
     }
   }
 }

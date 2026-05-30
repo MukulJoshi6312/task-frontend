@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 220" width="720" height="220">
+  <!--
+    Taskly wordmark — uses Fraunces (the same display font in the app).
+    If Fraunces isn't installed where this renders, a serif fallback kicks in.
+    When you export to PNG from Figma, embed Fraunces or convert text to
+    paths first so the shape is preserved.
+  -->
+  <style>
+    .wordmark {
+      font-family: "Fraunces", "Times New Roman", serif;
+      font-weight: 600;
+      font-style: normal;
+      font-size: 168px;
+      letter-spacing: -3px;
+    }
+  </style>
+
+  <!-- "Taskly" centered vertically -->
+  <text x="20" y="160" class="wordmark" fill="#1C1A17">Taskly</text>
+
+  <!--
+    Brand accent: a small orange "checkmark" tucked into the dot of the "i"-like
+    letterform. Position is calibrated against Fraunces. Tweak in your editor.
+  -->
+  <path d="M 535 70 L 558 92 L 600 50"
+        fill="none"
+        stroke="#FF6B4A"
+        stroke-width="14"
+        stroke-linecap="round"
+        stroke-linejoin="round"/>
+</svg>
