@@ -9,11 +9,12 @@ import { useAuth } from "../auth/AuthContext";
 
 type Theme = ReturnType<typeof useTheme>["theme"];
 
+// Keep this list HONEST — only list things premium actually unlocks today.
+// Reminders are free for everyone; don't promise them as a paid benefit.
 const BENEFITS = [
-  { icon: "infinite-outline", title: "Unlimited tasks", body: "No cap on how much you track." },
-  { icon: "notifications-outline", title: "Reminders", body: "Get notified before tasks are due." },
-  { icon: "repeat-outline", title: "Recurring tasks", body: "Daily, weekly, custom repeats." },
-  { icon: "color-palette-outline", title: "Premium themes", body: "Extra looks beyond light & dark." },
+  { icon: "infinite-outline", title: "Unlimited tasks", body: "Past the 15-task free cap, with no ceiling." },
+  { icon: "heart-outline", title: "Support development", body: "Help us keep building features and fixing bugs." },
+  { icon: "sparkles-outline", title: "First access to new features", body: "Recurring tasks, calendar view, and more — premium first." },
 ] as const;
 
 export default function PaywallScreen() {

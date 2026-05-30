@@ -24,7 +24,13 @@ import {
 import { ThemeProvider, useTheme } from "../theme/ThemeContext";
 import { AuthProvider, useAuth } from "../auth/AuthContext";
 import { CategoriesProvider } from "../categories/CategoriesContext";
+import { NotificationsProvider } from "../notifications/NotificationsContext";
 import BrandedLoading from "../components/BrandedLoading";
+import OfflineBanner from "../components/OfflineBanner";
+import { initNotifications } from "../lib/notifications";
+import { onboardingFlag } from "../lib/onboardingFlag";
+
+initNotifications();   // sets up the Android channel + foreground handler
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -60,7 +66,9 @@ export default function RootLayout() {
         <ThemeProvider>
           <AuthProvider>
             <CategoriesProvider>
-              <RootStack />
+              <NotificationsProvider>
+                <RootStack />
+              </NotificationsProvider>
             </CategoriesProvider>
           </AuthProvider>
         </ThemeProvider>
@@ -75,6 +83,12 @@ function RootStack() {
   const segments = useSegments();
   const router = useRouter();
 
+  // First-launch flag — undefined until we've checked AsyncStorage.
+  const [onboardedKnown, setOnboardedKnown] = useState<boolean | null>(null);
+  useEffect(() => {
+    onboardingFlag.hasSeen().then(setOnboardedKnown);
+  }, []);
+
   // Tell React Navigation about the brand background so it shows behind
   // rounded tab bar corners / between screens. Without this the default is
   // white in light AND dark themes — bleeds through anywhere children don't
@@ -83,34 +97,48 @@ function RootStack() {
     ? { ...DarkTheme,    colors: { ...DarkTheme.colors,    background: theme.bg, card: theme.surface } }
     : { ...DefaultTheme, colors: { ...DefaultTheme.colors, background: theme.bg, card: theme.surface } };
 
-  // Auth gate: bounce users to the right place based on auth state.
-  // Logged-out users may access login, verify, and forgot — anything else
-  // bounces them to /login. Logged-in users on any of those bounce to /.
+  // Auth + onboarding gate.
   useEffect(() => {
-    if (initialising) return;
-    const publicRoutes = new Set(["login", "verify", "forgot"]);
+    if (initialising || onboardedKnown === null) return;
+
+    // First launch ever → show the tour before anything else.
+    if (!onboardedKnown && segments[0] !== "onboarding") {
+      router.replace("/onboarding");
+      return;
+    }
+    // Note: we used to bounce users *away* from /onboarding if they'd seen
+    // it, but that broke the "Show tour again" feature — the local
+    // `onboardedKnown` state was stale (only read at mount), so re-visiting
+    // the tour after resetting the flag got instantly redirected back home.
+    // Visiting /onboarding intentionally is harmless: the tour has Skip and
+    // Get-started buttons that route the user out cleanly.
+
+    const publicRoutes = new Set(["login", "verify", "forgot", "onboarding"]);
     const inPublicRoute = publicRoutes.has(segments[0] as string);
     if (!user && !inPublicRoute) router.replace("/login");
-    else if (user && inPublicRoute) router.replace("/");
-  }, [user, segments, initialising, router]);
+    else if (user && inPublicRoute && segments[0] !== "onboarding") router.replace("/");
+  }, [user, segments, initialising, onboardedKnown, router]);
 
-  if (initialising) return <BrandedLoading />;
+  if (initialising || onboardedKnown === null) return <BrandedLoading />;
 
   return (
     <NavThemeProvider value={navTheme}>
       <StatusBar style={mode === "dark" ? "light" : "dark"} />
+      <OfflineBanner />
       <Stack
         screenOptions={{
           headerShown: false,
           contentStyle: { backgroundColor: theme.bg },
         }}
       >
+        <Stack.Screen name="onboarding" />
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="login" />
         <Stack.Screen name="verify" />
         <Stack.Screen name="forgot" />
         <Stack.Screen name="task/[id]" />
         <Stack.Screen name="categories" />
+        <Stack.Screen name="notifications" />
         <Stack.Screen name="paywall" options={{ presentation: "modal" }} />
       </Stack>
     </NavThemeProvider>

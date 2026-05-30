@@ -15,6 +15,7 @@ import {
   removeAvatar as apiRemoveAvatar,
 } from "../api/auth";
 import { mockUpgrade as apiMockUpgrade, mockDowngrade as apiMockDowngrade } from "../api/billing";
+import { cancelAllReminders } from "../lib/notifications";
 import type { User } from "../types";
 
 type AuthContextValue = {
@@ -43,6 +44,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [initialising, setInitialising] = useState(true);
 
   const signOut = useCallback(async () => {
+    await cancelAllReminders();   // reminders are device-scoped; don't fire for the next user
     await tokenStorage.clear();
     setUser(null);
   }, []);

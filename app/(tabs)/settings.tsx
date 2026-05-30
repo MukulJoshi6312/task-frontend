@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import {
-  View, Text, ScrollView, TouchableOpacity, StyleSheet, Animated,
+  View, Text, ScrollView, TouchableOpacity, StyleSheet, Animated, Switch,
 } from "react-native";
+import { getRemindersEnabled, setRemindersEnabled } from "../../lib/notifications";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -10,6 +11,8 @@ import { useTheme } from "../../theme/ThemeContext";
 import { FONTS } from "../../theme/fonts";
 import { useAuth } from "../../auth/AuthContext";
 import { describeDevice } from "../../lib/device";
+import ChangePasswordSheet from "../../components/ChangePasswordSheet";
+import { onboardingFlag } from "../../lib/onboardingFlag";
 
 type Theme = ReturnType<typeof useTheme>["theme"];
 
@@ -30,6 +33,15 @@ export default function SettingsScreen() {
   const { user, isPremium, mockDowngrade } = useAuth();
   const currentDevice = describeDevice();
   const appVersion = Constants.expoConfig?.version ?? "1.0.0";
+
+  const [remindersOn, setRemindersOn] = useState(true);
+  useEffect(() => { getRemindersEnabled().then(setRemindersOn); }, []);
+  const toggleReminders = async (next: boolean) => {
+    setRemindersOn(next);   // optimistic
+    await setRemindersEnabled(next);
+  };
+
+  const [pwSheetOpen, setPwSheetOpen] = useState(false);
 
   return (
     <SafeAreaView style={s.root} edges={["top"]}>
@@ -69,13 +81,39 @@ export default function SettingsScreen() {
 
         {/* Personalize */}
         <Section label="Personalize" theme={theme}>
-          <TouchableOpacity onPress={() => router.push("/categories")} activeOpacity={0.7} style={s.navRow}>
+          <TouchableOpacity onPress={() => router.push("/categories")} activeOpacity={0.7} style={[s.navRow, { borderBottomWidth: 1, borderBottomColor: theme.line }]}>
             <View style={s.navIcon}>
               <Ionicons name="pricetags-outline" size={18} color={theme.inkSoft} />
             </View>
             <View style={{ flex: 1 }}>
               <Text style={s.navLabel}>Categories</Text>
               <Text style={s.navValue}>Add, edit, or remove task categories</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={theme.inkFaint} />
+          </TouchableOpacity>
+
+          <View style={[s.navRow, { borderBottomWidth: 1, borderBottomColor: theme.line }]}>
+            <View style={s.navIcon}>
+              <Ionicons name="notifications-outline" size={18} color={theme.inkSoft} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={s.navLabel}>Reminders</Text>
+              <Text style={s.navValue}>Notify me when a task is due</Text>
+            </View>
+            <Switch
+              value={remindersOn}
+              onValueChange={toggleReminders}
+              trackColor={{ true: theme.accent, false: theme.line }}
+            />
+          </View>
+
+          <TouchableOpacity onPress={() => setPwSheetOpen(true)} activeOpacity={0.7} style={s.navRow}>
+            <View style={s.navIcon}>
+              <Ionicons name="lock-closed-outline" size={18} color={theme.inkSoft} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={s.navLabel}>Change password</Text>
+              <Text style={s.navValue}>Update the password you use to log in</Text>
             </View>
             <Ionicons name="chevron-forward" size={18} color={theme.inkFaint} />
           </TouchableOpacity>
@@ -106,9 +144,30 @@ export default function SettingsScreen() {
 
         {/* About */}
         <Section label="About" theme={theme}>
-          <InfoRow theme={theme} icon="information-circle-outline" label="Version" value={appVersion} last />
+          <View style={{ borderBottomWidth: 1, borderBottomColor: theme.line }}>
+            <InfoRow theme={theme} icon="information-circle-outline" label="Version" value={appVersion} last />
+          </View>
+          <TouchableOpacity
+            onPress={async () => {
+              await onboardingFlag.reset();
+              router.replace("/onboarding");
+            }}
+            activeOpacity={0.7}
+            style={s.navRow}
+          >
+            <View style={s.navIcon}>
+              <Ionicons name="sparkles-outline" size={18} color={theme.inkSoft} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={s.navLabel}>Show tour again</Text>
+              <Text style={s.navValue}>Replay the 3-screen welcome</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={theme.inkFaint} />
+          </TouchableOpacity>
         </Section>
       </ScrollView>
+
+      <ChangePasswordSheet visible={pwSheetOpen} onClose={() => setPwSheetOpen(false)} />
     </SafeAreaView>
   );
 }

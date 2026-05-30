@@ -12,6 +12,7 @@ import { PRIORITIES } from "../../theme/theme";
 import { useCategories } from "../../categories/CategoriesContext";
 import { FONTS } from "../../theme/fonts";
 import { fetchTask, updateTask, deleteTask } from "../../api/tasks";
+import { scheduleTaskReminder, cancelTaskReminder } from "../../lib/notifications";
 import { formatDue } from "../../lib/dates";
 import TaskSheet from "../../components/TaskSheet";
 import type { Task, Priority, Subtask } from "../../types";
@@ -67,6 +68,9 @@ export default function TaskDetailScreen() {
   const toggleComplete = async () => {
     const next = { ...task, completed: !task.completed };
     setTask(next);
+    // Completing a task should drop its reminder; un-completing reinstates if still in the future.
+    if (next.completed) void cancelTaskReminder(task._id);
+    else if (task.due) void scheduleTaskReminder({ id: task._id, title: task.title, body: task.note, date: task.due });
     try {
       const updated = await updateTask(task._id, { completed: next.completed });
       setTask(updated);
@@ -82,6 +86,12 @@ export default function TaskDetailScreen() {
     try {
       const updated = await updateTask(task._id, data);
       setTask(updated);
+      // Reschedule based on the new due/title. The helper cancels any existing one first.
+      if (updated.due && !updated.completed) {
+        void scheduleTaskReminder({ id: updated._id, title: updated.title, body: updated.note, date: updated.due });
+      } else {
+        void cancelTaskReminder(updated._id);
+      }
     } catch {
       Alert.alert("Error", "Could not save changes.");
     }
@@ -96,6 +106,7 @@ export default function TaskDetailScreen() {
         onPress: async () => {
           try {
             await deleteTask(task._id);
+            void cancelTaskReminder(task._id);
             router.back();
           } catch {
             Alert.alert("Error", "Could not delete task.");

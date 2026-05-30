@@ -4,6 +4,27 @@ export type Category = {
   color: string;
 };
 
+export type Notification = {
+  _id: string;
+  type: string;        // "welcome" | "task_completed" | "info" | ...
+  title: string;
+  body: string;
+  taskId?: string | null;
+  read: boolean;
+  createdAt: string;
+};
+
+export type TaskStats = {
+  total: number;
+  completed: number;
+  active: number;
+  completionRate: number;        // 0-100
+  completedToday: number;
+  completedThisWeek: number;
+  dueToday: number;
+  memberSince: string;
+};
+
 export type Plan = "free" | "premium";
 
 export type User = {

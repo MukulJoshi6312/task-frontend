@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   View, Text, TextInput, FlatList, TouchableOpacity, StyleSheet,
   ActivityIndicator, RefreshControl, Alert,
@@ -15,10 +15,14 @@ import { useCategories } from "../../categories/CategoriesContext";
 import { fetchTasks, createTask, updateTask, deleteTask } from "../../api/tasks";
 import TaskSheet from "../../components/TaskSheet";
 import Avatar from "../../components/Avatar";
+import BellIcon from "../../components/BellIcon";
 import {
   formatDue, isToday as dueToday, isUpcoming as dueUpcoming, greetingForNow,
 } from "../../lib/dates";
 import { useAuth } from "../../auth/AuthContext";
+import { useNotifications } from "../../notifications/NotificationsContext";
+import { scheduleTaskReminder, cancelTaskReminder } from "../../lib/notifications";
+import { taskCache } from "../../lib/taskCache";
 import type { Task, Subtask } from "../../types";
 
 const FILTERS = ["All", "Today", "Upcoming", "Done"] as const;
@@ -46,6 +50,7 @@ export default function HomeScreen() {
   const s = makeStyles(theme);
   const router = useRouter();
   const { user } = useAuth();
+  const { reload: reloadNotifications } = useNotifications();
 
   const [tasks, setTasks] = useState<Task[]>([]);
   // `initialised` is set true after the very first fetch finishes.
@@ -63,24 +68,53 @@ export default function HomeScreen() {
   const greetingName = user?.name?.trim() || user?.email?.split("@")[0] || "there";
 
   const load = useCallback(async () => {
+    // Best-effort hydrate from cache first so the user sees SOMETHING instantly
+    // (especially after a cold start while offline).
+    if (user && !initialised) {
+      const cached = await taskCache.load(user._id);
+      if (cached && cached.length) setTasks(cached);
+    }
     try {
       const next = await fetchTasks();
       setTasks(next);
+      // Cache is now kept in sync automatically by the effect below.
     } catch (e) {
-      console.error("[Home] fetchTasks failed:", e);
-      Alert.alert("Error", "Could not load tasks. Is the API running?");
+      // Network/server failed. If we have a cache, keep showing it silently;
+      // only alert when we have NOTHING to display.
+      if (user) {
+        const cached = await taskCache.load(user._id);
+        if (cached && cached.length) {
+          setTasks(cached);
+        } else {
+          console.error("[Home] fetchTasks failed:", e);
+          Alert.alert("Error", "Could not load tasks. Is the API running?");
+        }
+      }
     } finally {
       setInitialised(true);
       setRefreshing(false);
     }
-  }, []);
+  }, [user, initialised]);
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
     load();
   }, [load]);
 
-  useFocusEffect(useCallback(() => { load(); }, [load]));
+  useFocusEffect(useCallback(() => {
+    load();
+    // Refresh the inbox too — covers task completions made on the Detail
+    // screen, so the bell badge isn't stale when you come back to Home.
+    void reloadNotifications();
+  }, [load, reloadNotifications]));
+
+  // Keep the offline cache in sync with whatever's currently in state.
+  // Catches every mutation path (create, toggle, edit, swipe-delete, refresh)
+  // — including optimistic updates that don't go through `load()`.
+  useEffect(() => {
+    if (!user || !initialised) return;
+    void taskCache.save(user._id, tasks);
+  }, [tasks, user, initialised]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -106,6 +140,9 @@ export default function HomeScreen() {
     try {
       const updated = await updateTask(task._id, { completed: next.completed });
       setTasks((prev) => prev.map((t) => (t._id === task._id ? updated : t)));
+      // A new "task_completed" notification may have been created server-side
+      // (deduped on the server). Refetch so the bell badge updates immediately.
+      if (next.completed) void reloadNotifications();
     } catch {
       setTasks((prev) => prev.map((t) => (t._id === task._id ? task : t)));
     }
@@ -114,6 +151,7 @@ export default function HomeScreen() {
   const handleDelete = async (task: Task) => {
     // Optimistic: remove immediately, restore if the request fails.
     setTasks((prev) => prev.filter((t) => t._id !== task._id));
+    void cancelTaskReminder(task._id);   // device-side: drop any scheduled reminder
     try {
       await deleteTask(task._id);
     } catch {
@@ -129,6 +167,11 @@ export default function HomeScreen() {
     try {
       const created = await createTask(data);
       setTasks((prev) => [created, ...prev]);
+      if (created.due) {
+        void scheduleTaskReminder({
+          id: created._id, title: created.title, body: created.note, date: created.due,
+        });
+      }
     } catch (e) {
       const err = e as { response?: { status?: number; data?: { code?: string } } };
       // Free-plan task limit hit → send them to the paywall instead of a generic error.
@@ -148,7 +191,10 @@ export default function HomeScreen() {
           <Text style={s.dateLine}>{todayString()}</Text>
           <Text style={s.greeting}>{greetingForNow()},{"\n"}{greetingName}</Text>
         </View>
-        <Avatar url={user?.avatarUrl} name={user?.name} email={user?.email} size={52} />
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
+          <BellIcon />
+          <Avatar url={user?.avatarUrl} name={user?.name} email={user?.email} size={52} />
+        </View>
       </View>
       <Text style={s.sub}>
         You have <Text style={{ color: theme.accent, fontFamily: FONTS.sansBold }}>{remaining} tasks</Text> left for today.
